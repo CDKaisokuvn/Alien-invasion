@@ -1,8 +1,11 @@
 import sys
-
+import time
 import pygame
+
 from settings import Settings
 from ship import Ship
+from bullet import Bullet
+from alien import Alien
 
 
 class AlienInvasion():
@@ -14,11 +17,15 @@ class AlienInvasion():
         pygame.init()
         self.settings = Settings()
         self.screen = pygame.display.set_mode(
-            (0, 0), pygame.FULLSCREEN)
+            (self.settings.screen_width, self.settings.screen_height))
         self.settings.screen_width = self.screen.get_rect().width
         self.settings.screen_height = self.screen.get_rect().height
         pygame.display.set_caption("Alien Invasion")
         self.ship = Ship(self)
+        self.bullets = pygame.sprite.Group()
+        self.aliens = pygame.sprite.Group()
+
+        self._create_fleet()
 
     def run_game(self):
         """Start the main loop for the game.
@@ -27,8 +34,17 @@ class AlienInvasion():
         while True:
             # Watch for keyboard and mouse events.
             self._check_events()
+
             # Update the ship's states
+
             self.ship.update()
+            # Update the bullets
+
+            self.bullets.update()
+            for bullet in self.bullets.copy():
+                if bullet.rect.bottom <= 0:
+                    self.bullets.remove(bullet)
+
             # Show on the screen
             self._update_screen()
 
@@ -50,6 +66,8 @@ class AlienInvasion():
             self.ship.moving_right = True
         if event.key == pygame.K_LEFT:
             self.ship.moving_left = True
+        if event.key == pygame.K_SPACE:
+            self._fire_bullet()
         if event.key == pygame.K_ESCAPE:
             sys.exit(0)
 
@@ -66,8 +84,33 @@ class AlienInvasion():
         self.screen.fill(self.settings.bg_color)
         # Drawn ship image.
         self.ship.blitme()
+        # Draw bullets
+        for bullet in self.bullets.sprites():
+            bullet.draw_bullet()
+        self.aliens.draw(self.screen)
+
         # Make the most recently drawn screen visible
         pygame.display.flip()
+
+    def _fire_bullet(self):
+        """Create a new bullet and add it to the bullets group."""
+        new_bullet = Bullet(self)
+
+        self.bullets.add(new_bullet)
+
+    def _create_fleet(self):
+        """Create a fleet of aliens for the game."""
+        # Make an alien.
+        alien = Alien(self)
+        alien_width = alien.rect.width
+        available_space_x = self.settings.screen_width - (2*alien_width)
+        number_aliens_x = available_space_x // (2 * alien_width)
+
+        for alien_number in range(number_aliens_x):
+            alien = Alien(self)
+            alien.x = alien_width + 2 * alien_width * alien_number
+            alien.rect.x = alien.x
+            self.aliens.add(alien)
 
 
 if __name__ == "__main__":
